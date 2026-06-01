@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f26f13560a348f4917e76eded00c991, type: 3}
+  m_Name: Project Settings
+  m_EditorClassIdentifier: Assembly-CSharp::_.Scriptable_Objects.ProjectSettings
+  _mainCameraAssetReference:
+    m_AssetGUID: 
+    m_SubObjectName: 
+    m_SubObjectType: 
+    m_SubObjectGUID: 
+    m_EditorAssetChanged: 0
+  _userInterfacePresets:
+    _values:
+    - _identity: Gameplay UI
+      _value:
+        UserInterfaceAssemblyName: _.Scripts.User_Interface.Gameplay_Screen.GameplayScreen,
+          Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+        UserInterfaceViewAssemblyName: _.Scripts.User_Interface.Gameplay_Screen.GameplayScreenView,
+          Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+        GameObjectAssetReference:
+          m_AssetGUID: d549ed282e44ab342b63855a0a16b2ed
+          m_SubObjectName: 
+          m_SubObjectType: 
+          m_SubObjectGUID: 
+          m_EditorAssetChanged: 1
+        UserInterfaceAnimationAssemblyName: _.Scripts.User_Interface.Gameplay_Screen.GameplayScreenAnimations,
+          Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+        AnimationPreset: {fileID: 11400000, guid: b181f08bd647ff64f9783531ae45254b, type: 2}

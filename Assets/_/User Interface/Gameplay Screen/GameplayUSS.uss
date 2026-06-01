@@ -1,0 +1,177 @@
+Button {
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    border-left-color: rgba(0, 0, 0, 0);
+    border-right-color: rgba(0, 0, 0, 0);
+    border-top-color: rgba(0, 0, 0, 0);
+    border-bottom-color: rgba(0, 0, 0, 0);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 50px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 50px;
+    background-color: rgba(255, 255, 255, 0);
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.container__header {
+    height: 250px;
+    background-color: rgb(232, 255, 255);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 50px;
+    border-bottom-left-radius: 50px;
+}
+
+.header__rightPivot {
+    left: auto;
+    position: absolute;
+    height: 100%;
+    width: 100px;
+    right: 75px;
+    justify-content: center;
+}
+
+.header__leftPivot {
+    position: relative;
+    width: 100px;
+    height: 100%;
+    right: auto;
+    left: 75px;
+    justify-content: center;
+}
+
+.header__centerTopPivot {
+    position: absolute;
+    top: 50px;
+    left: 250px;
+    right: 250px;
+    bottom: 120px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+.header__centerBottomPivot {
+    position: absolute;
+    bottom: 25px;
+    top: 155px;
+    left: 250px;
+    right: 250px;
+}
+
+.header__button {
+    width: 100px;
+    height: 100px;
+    background-color: rgb(119, 197, 202);
+    border-top-left-radius: 50px;
+    border-bottom-left-radius: 50px;
+    border-top-right-radius: 50px;
+    border-bottom-right-radius: 50px;
+}
+
+.header-button-icon {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+}
+
+.heart__heartBit {
+    aspect-ratio: 1;
+    background-image: url("project://database/Assets/Plugins/DOTween/Editor/Imgs/DOTweenMiniIcon.png?fileID=2800000&guid=997edbdcffba8c24cb322b64a1bc0319&type=3#DOTweenMiniIcon");
+    -unity-background-image-tint-color: rgb(108, 108, 108);
+    margin-right: 5px;
+    margin-left: 5px;
+    width: 75px;
+}
+
+.heart__heartBit--active {
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+}
+
+.header__timer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background-color: rgb(92, 153, 156);
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+    border-top-left-radius: 25px;
+    border-top-right-radius: 25px;
+    border-bottom-right-radius: 25px;
+    border-bottom-left-radius: 25px;
+    overflow: hidden;
+}
+
+.header__timer .unity-progress-bar__container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    min-width: auto;
+    min-height: auto;
+    max-width: none;
+    max-height: none;
+}
+
+.header__timer .unity-progress-bar__background {
+    background-color: rgba(0, 0, 0, 0);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+}
+
+.header__timer .unity-progress-bar__progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    margin-top: 5px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    margin-left: 5px;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-bottom-left-radius: 20px;
+    transition-property: right;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-out-elastic;
+}
+
+.header__timer .unity-progress-bar__title {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    -unity-text-align: middle-center;
+    font-size: 39px;
+    -unity-font-style: bold;
+    letter-spacing: -10px;
+    color: rgb(232, 255, 255);
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: rgb(92, 153, 156);
+}
