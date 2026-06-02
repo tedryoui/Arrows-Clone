@@ -11,6 +11,8 @@ namespace _.Scripts.Entry_Point
         
         public void PostInitialize()
         {
+            Application.targetFrameRate = 60;
+            
             var dataServiceDebugGameObject = new GameObject("DataServiceDebug");
             var component = dataServiceDebugGameObject.AddComponent<DataServiceDebug>();
             
