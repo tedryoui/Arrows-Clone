@@ -1,0 +1,100 @@
+Label {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    -unity-font-style: normal;
+    color: rgb(115, 115, 115);
+    font-size: 12px;
+}
+
+.container {
+    flex-grow: 1;
+}
+
+.container__bar {
+    background-color: rgb(60, 60, 60);
+    position: absolute;
+    top: auto;
+    left: 0;
+    right: 0;
+    max-height: 20px;
+    min-height: 20px;
+}
+
+.container__top-bar {
+    top: 0;
+    flex-direction: row;
+}
+
+.container__bottom-bar {
+    bottom: 0;
+    padding-left: 5px;
+    justify-content: center;
+}
+
+.container__main {
+    top: 20px;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    position: absolute;
+    overflow: hidden;
+}
+
+
+
+.container__main > UIToolkitSceneControl {
+    flex-grow: 1;
+}
+
+.header__folder {
+    justify-content: center;
+    flex-direction: row;
+}
+
+.header__folder-field {
+    -unity-text-align: middle-left;
+}
+
+.header__folder-field > Label {
+    min-width: auto;
+    margin-right: 20px;
+}
+
+.header__folder-field > VisualElement {
+    min-width: 125px;
+    max-width: 125px;
+}
+
+.header__folder-dropdown {
+    min-width: auto;
+    max-width: none;
+    width: 220px;
+}
+
+.container__modal {
+    position: absolute;
+    bottom: 25px;
+    width: 248px;
+    height: 124px;
+    right: 5px;
+    background-color: rgba(40, 40, 40, 0.67);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-left-color: rgba(40, 40, 40, 0.28);
+    border-right-color: rgba(40, 40, 40, 0.28);
+    border-top-color: rgba(40, 40, 40, 0.28);
+    border-bottom-color: rgba(40, 40, 40, 0.28);
+    display: none;
+}

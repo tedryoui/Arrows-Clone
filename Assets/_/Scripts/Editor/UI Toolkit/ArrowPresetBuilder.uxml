@@ -1,0 +1,20 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/_/Scripts/Editor/UI%20Toolkit/ArrowPresetBuilder.uss?fileID=7433441132597879392&amp;guid=419dc86cf1a835c4da18f927fd4adfa2&amp;type=3#ArrowPresetBuilder"/>
+    <ui:VisualElement name="Container" class="container">
+        <ui:VisualElement name="Header" class="container__bar container__top-bar">
+            <ui:VisualElement name="Folder" class="header__folder" style="justify-content: space-between; flex-grow: 1;">
+                <uie:ObjectField label="Folder" allow-scene-objects="false" value="project://database/Assets/Plugins/Sirenix/Odin%20Inspector/Assets?fileID=102900000&amp;guid=52c0fd243c6c01e4d9efa03616b655d5&amp;type=3#Assets" type="UnityEditor.DefaultAsset, UnityEditor.CoreModule" name="DirectoryField" class="header__folder-field"/>
+                <ui:VisualElement style="flex-direction: row;">
+                    <ui:DropdownField label="" name="SelectField" choices="Selected: undefined" index="0" class="header__folder-dropdown"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="Main" class="container__main">
+            <_.Scripts.Editor.UI_Toolkit.UIToolkitSceneControl/>
+        </ui:VisualElement>
+        <ui:VisualElement name="Footer" class="container__bar container__bottom-bar">
+            <ui:Label text="Arrow Preset Builder v 0.1"/>
+        </ui:VisualElement>
+        <ui:VisualElement name="Modal" class="container__modal"/>
+    </ui:VisualElement>
+</ui:UXML>
