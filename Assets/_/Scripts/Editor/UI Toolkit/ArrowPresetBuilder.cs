@@ -26,10 +26,11 @@ public class ArrowPresetBuilder : EditorWindow
         wnd.maxSize      = new Vector2(480, 720);
     }
     
-    private ObjectField           m_DirectoryField = default;
-    private DropdownField         m_SelectField    = default;
-    private Label                 m_CameraZLabel   = default;
-    private UIToolkitSceneControl m_SceneControl   = default;
+    private ObjectField           m_DirectoryField      = default;
+    private DropdownField         m_SelectField         = default;
+    private Label                 m_CameraSizeLabel     = default;
+    private Label                 m_CameraPositionLabel = default;
+    private UIToolkitSceneControl m_SceneControl        = default;
 
     private Dictionary<string, string> m_PresetNameToPath;
     private string                     m_DirectoryPath;
@@ -48,8 +49,13 @@ public class ArrowPresetBuilder : EditorWindow
             m_SceneControl = rootVisualElement.Q<UIToolkitSceneControl>();
             m_SceneControl.OnUpdate(OnSceneUpdate);
             
-            m_CameraZLabel      = rootVisualElement.Q<Label>("CameraZ");
-            m_CameraZLabel.text = "";
+            m_CameraSizeLabel      = rootVisualElement.Q<Label>("CameraSize");
+            m_CameraSizeLabel.text = "";
+            m_CameraSizeLabel.RegisterCallback<MouseUpEvent>(OnCameraSizeClicked);
+            
+            m_CameraPositionLabel      = rootVisualElement.Q<Label>("CameraPosition");
+            m_CameraPositionLabel.text = "";
+            m_CameraPositionLabel.RegisterCallback<MouseUpEvent>(OnCameraPositionClicked);
             
             m_DirectoryField.value = FindFirstDirectoryWithPreset();
             m_SelectField.value    = m_SelectField.choices[0];
@@ -57,6 +63,22 @@ public class ArrowPresetBuilder : EditorWindow
             // Delay RefreshSceneView to ensure scene is initialized
             EditorApplication.delayCall += () => RefreshSceneView();
         }
+
+    private void OnCameraPositionClicked(MouseUpEvent evt)
+    {
+        if (m_SceneControl.IsValid())
+        {
+            m_SceneControl.SetCameraPosition(Vector3.forward * -10);
+        }
+    }
+
+    private void OnCameraSizeClicked(MouseUpEvent evt)
+    {
+        if (m_SceneControl.IsValid())
+        {
+            m_SceneControl.SetCameraSize(7);
+        }
+    }
 
     private void OnPresetChanged(ChangeEvent<string> evt)
     {
@@ -94,7 +116,10 @@ public class ArrowPresetBuilder : EditorWindow
     private void OnSceneUpdate()
     {
         var zoom = m_SceneControl.Camera.orthographicSize / 14.0f;
-        m_CameraZLabel.text = $"ZOOM: x{zoom:F2}";
+        m_CameraSizeLabel.text = $"ZOOM: x{zoom:F2}";
+        
+        var localPosition = m_SceneControl.Camera.transform.localPosition;
+        m_CameraPositionLabel.text = $"P: ({localPosition.x:F1}, {localPosition.y:F1})";
     }
 
     private void RefreshSceneView()
@@ -106,6 +131,8 @@ public class ArrowPresetBuilder : EditorWindow
             fadeOutMin = 0.1f,
             fadeOutMax = 1f
         };
+
+        m_SceneControl.Camera.orthographicSize = 7;
     }
 
     private void OnDirectoryChanged(ChangeEvent<Object> evt) => OnDirectoryChanged(evt.newValue);

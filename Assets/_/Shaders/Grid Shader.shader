@@ -43,7 +43,7 @@ Shader "Custom/GridShader"
             };
 
             CBUFFER_START(UnityPerMaterial)
-                float3 _GridOffset;
+                float2 _GridOffset;
                 half4 _GridLineColor;
                 float _FadeOutMin;
                 float _FadeOutMax;
@@ -64,49 +64,43 @@ Shader "Custom/GridShader"
 
             half4 frag(Varyings IN) : SV_Target
             {
-                float2 worldPos = IN.worldPos.xy;
+                float2 worldPos = IN.worldPos.xy + _GridOffset;
                 
-                // Apply grid offset
-                float2 gridPos = worldPos + _GridOffset.xy;
-                
-                // Calculate dynamic grid size based on orthographic size
-                // orthoSize 7 -> grid size 1, 14 -> 2, 24 -> 4, 48 -> 8
                 float gridSize = 1.0;
                 if (_OrthoSize > 0)
                 {
-                    // Step-based scaling: each 7 units doubles the grid size
-                    // 7-13: 1, 14-20: 2, 21-27: 4, 28-34: 8, etc.
                     float steps = floor((_OrthoSize - 7.0) / 7.0);
-                    // Cap at 3 steps (max grid size 8)
                     steps = min(steps, 3.0);
                     gridSize = pow(2.0, steps);
                 }
                 
-                // Calculate grid lines with fwidth for anti-aliasing
+                float2 gridPos = worldPos + gridSize * 0.5;
+                
                 float2 gridFrac = frac(gridPos / gridSize);
                 float2 gridDist = abs(gridFrac - 0.5);
                 
-                // Use fwidth for smooth anti-aliased lines
                 float gridLine = min(gridDist.x, gridDist.y);
                 float grid = 1.0 - smoothstep(0.0, fwidth(gridLine) * 2.0, gridLine - 0.02);
                 
-                // Calculate fadeout based on distance from bounds rectangle
-                // Fade out when outside the bounds area
+                float halfGridSize = gridSize * 0.5;
+                float2 halfGridPos = worldPos + halfGridSize * 0.5;
+                float2 halfGridFrac = frac(halfGridPos / halfGridSize);
+                float2 halfGridDist = abs(halfGridFrac - 0.5);
+                float halfGridLine = min(halfGridDist.x, halfGridDist.y);
+                float halfGrid = 1.0 - smoothstep(0.0, fwidth(halfGridLine) * gridSize, halfGridLine - 0.01);
+                
                 float2 fadeDist = 0.0;
                 
-                // Check if outside bounds in x
                 if (worldPos.x < _GridBoundsMin.x)
                     fadeDist.x = _GridBoundsMin.x - worldPos.x;
                 else if (worldPos.x > _GridBoundsMax.x)
                     fadeDist.x = worldPos.x - _GridBoundsMax.x;
                     
-                // Check if outside bounds in y
                 if (worldPos.y < _GridBoundsMin.y)
                     fadeDist.y = _GridBoundsMin.y - worldPos.y;
                 else if (worldPos.y > _GridBoundsMax.y)
                     fadeDist.y = worldPos.y - _GridBoundsMax.y;
                 
-                // Calculate fade factor
                 float fade = 1.0;
                 float2 boundsSize = _GridBoundsMax - _GridBoundsMin;
                 float maxFadeDist = max(boundsSize.x, boundsSize.y) * 0.5;
@@ -117,8 +111,7 @@ Shader "Custom/GridShader"
                     fade = lerp(_FadeOutMax, _FadeOutMin, fadeFactor);
                 }
                 
-                // Return light gray lines on transparent background
-                return half4(_GridLineColor.rgb, _GridLineColor.a * grid * fade);
+                return half4(_GridLineColor.rgb, _GridLineColor.a * (grid + halfGrid * 0.5) * fade);
             }
 
             ENDHLSL

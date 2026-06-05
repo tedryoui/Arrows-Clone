@@ -15,7 +15,8 @@
         <ui:VisualElement name="Footer" class="container__bar container__bottom-bar">
             <ui:Label text="Arrow Preset Builder v 0.1"/>
             <ui:VisualElement style="flex-grow: 1; height: 100%; flex-direction: row; justify-content: flex-end; align-items: center; padding-right: 5px;">
-                <ui:Label text="Z: +000" name="CameraZ"/>
+                <ui:Label text="P: (0, 0)" name="CameraPosition" style="margin-right: 5px;"/>
+                <ui:Label text="Z: +000" name="CameraSize"/>
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="Modal" class="container__modal"/>

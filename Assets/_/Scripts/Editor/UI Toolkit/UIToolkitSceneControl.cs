@@ -40,8 +40,11 @@ namespace _.Scripts.Editor.UI_Toolkit
         private RenderTexture _renderTexture;
         private Camera        _camera;
 
-        private float2 _previousMousePosition;
-        private bool   _isWheenDown;
+        private float2  _previousMousePosition;
+        private bool    _isWheenDown;
+        private Vector3 _targetCameraPosition;
+        private float   _targetCameraSize;
+        private float   _cameraSpeed;
 
         private event Action _onUpdate;
         
@@ -52,6 +55,8 @@ namespace _.Scripts.Editor.UI_Toolkit
 
         public Camera Camera => _camera;
         public Scene Scene => _scene;
+
+        public float DeltaTime => 1.0f / 100f;
         
         public GridParameters Grid
         {
@@ -74,6 +79,10 @@ namespace _.Scripts.Editor.UI_Toolkit
             _renderTexture =
                 new RenderTexture(480, 720, 24, RenderTextureFormat.ARGB32);
             _renderTexture.Create();
+
+            _targetCameraPosition = Vector3.forward * -10;
+            _targetCameraSize     = 7f;
+            _cameraSpeed          = 4.0f;
             
             CreateSceneView();
             
@@ -89,11 +98,21 @@ namespace _.Scripts.Editor.UI_Toolkit
                          return;
 
                      _onUpdate?.Invoke();
+                     UpdateCamera();
                      RenderGrid();
                      _camera.Render();
                      _view.MarkDirtyRepaint();
-                 }).Every((uint)(1000 / 120.0f));
+                 }).Every((uint)(DeltaTime * 1000.0f));
             }
+        }
+
+        private void UpdateCamera()
+        {
+            var currentPosition = math.lerp(_camera.transform.localPosition, _targetCameraPosition, DeltaTime * _cameraSpeed);
+            _camera.transform.localPosition = currentPosition;
+            
+            var currentOrthographicSize = math.lerp(_camera.orthographicSize, _targetCameraSize, DeltaTime * _cameraSpeed);
+            _camera.orthographicSize = currentOrthographicSize;
         }
 
         private void OnPanelDetachEvent(DetachFromPanelEvent evt)
@@ -136,7 +155,6 @@ namespace _.Scripts.Editor.UI_Toolkit
             if (_gridMaterial == null || _quadMesh == null || !_scene.IsValid())
                 return;
             
-            // Check if grid parameters changed
             if (_grid.color != _gridPrevious.color || 
                 _grid.lineSize != _gridPrevious.lineSize ||
                 _grid.fadeOutMin != _gridPrevious.fadeOutMin ||
@@ -146,26 +164,19 @@ namespace _.Scripts.Editor.UI_Toolkit
                 _gridPrevious = _grid;
             }
             
-            // Set grid offset to 0.5, 0.5, 0.0
-            _gridMaterial.SetVector("_GridOffset", new Vector4(0.5f, 0.5f, 0.0f, 0.0f));
-            
-            // Calculate bounds based on camera orthographic size
             float orthoSize = _camera.orthographicSize;
             float aspect = _camera.aspect;
             
-            // Set grid bounds for fadeout effect
             _gridMaterial.SetVector("_GridBoundsMin", new Vector4(-orthoSize * aspect, -orthoSize, 0, 0));
             _gridMaterial.SetVector("_GridBoundsMax", new Vector4(orthoSize * aspect, orthoSize, 0, 0));
+            _gridMaterial.SetVector("_GridOffset", new  Vector4(0.5f, 0.5f, 0, 0));
             
-            // Set orthographic size for dynamic grid cell size
             _gridMaterial.SetFloat("_OrthoSize", orthoSize);
             
-            // Get camera position
             var cameraPos = _camera.transform.position;
             
-            // Draw the grid as a full-screen rectangle at camera position XY with Z = -1
             var matrix = Matrix4x4.TRS(
-                new Vector3(cameraPos.x, cameraPos.y, -1),
+                new Vector3(cameraPos.x, cameraPos.y, 1),
                 Quaternion.identity,
                 new Vector3(orthoSize * aspect * 2, orthoSize * 2, 1)
             );
@@ -221,9 +232,9 @@ namespace _.Scripts.Editor.UI_Toolkit
             _camera.orthographic       = true;
             _camera.transform.forward  = Vector3.forward;
             _camera.enabled            = false;
-            _camera.orthographicSize   = 14;
+            _camera.orthographicSize   = _targetCameraSize;
             _camera.targetTexture      = _renderTexture;
-            _camera.transform.position = new Vector3(0, 0, -10);
+            _camera.transform.position = _targetCameraPosition;
             _camera.scene              = _scene;
             
             EditorSceneManager.MoveGameObjectToScene(_camera.gameObject, _scene);
@@ -251,10 +262,13 @@ namespace _.Scripts.Editor.UI_Toolkit
 
         private void OnWheel(WheelEvent evt)
         {
-            var deltaTime = 1.0f / 120.0f;
-            var zoomSpeed = 10.0f * deltaTime;
+            var deltaTime = DeltaTime;
+            var zoomSpeed = 18.0f * deltaTime;
 
-            _camera.orthographicSize += zoomSpeed * evt.delta.y;
+            if (_targetCameraSize > 7f || evt.delta.y > 0.0f)
+                _targetCameraSize += zoomSpeed * evt.delta.y;
+            else
+                _targetCameraSize = 7f;
             
             evt.StopPropagation();
         }
@@ -263,15 +277,15 @@ namespace _.Scripts.Editor.UI_Toolkit
         {
             if (_isWheenDown)
             {
-                var deltaTime = 1.0f / 120.0f;
-                var moveSpeed = 4.4f * deltaTime;
+                var deltaTime = DeltaTime;
+                var moveSpeed = 4.0f * deltaTime;
                 var delta     = ((float2)evt.mousePosition - _previousMousePosition) * moveSpeed;
                 delta.x *= -1;
 
-                var transformLocalPosition = _camera.transform.localPosition;
+                var transformLocalPosition = _targetCameraPosition;
                 transformLocalPosition += new Vector3(delta.x, delta.y);
 
-                _camera.transform.localPosition = transformLocalPosition;
+                _targetCameraPosition = transformLocalPosition;
                 _previousMousePosition = evt.mousePosition;
             }
             
@@ -320,6 +334,16 @@ namespace _.Scripts.Editor.UI_Toolkit
         public void OnUpdate(Action callback)
         {
             _onUpdate = callback;
+        }
+
+        public void SetCameraPosition(Vector3 localPosition)
+        {
+            _targetCameraPosition = localPosition;
+        }
+
+        public void SetCameraSize(float orthographicSize)
+        {
+            _targetCameraSize = orthographicSize;
         }
     }
 }
