@@ -34,7 +34,9 @@ Label {
 .container__bottom-bar {
     bottom: 0;
     padding-left: 5px;
-    justify-content: center;
+    justify-content: space-between;
+    flex-direction: row;
+    align-items: center;
 }
 
 .container__main {
@@ -45,8 +47,6 @@ Label {
     position: absolute;
     overflow: hidden;
 }
-
-
 
 .container__main > UIToolkitSceneControl {
     flex-grow: 1;

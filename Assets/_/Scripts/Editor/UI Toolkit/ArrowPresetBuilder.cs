@@ -28,30 +28,35 @@ public class ArrowPresetBuilder : EditorWindow
     
     private ObjectField           m_DirectoryField = default;
     private DropdownField         m_SelectField    = default;
+    private Label                 m_CameraZLabel   = default;
     private UIToolkitSceneControl m_SceneControl   = default;
 
     private Dictionary<string, string> m_PresetNameToPath;
     private string                     m_DirectoryPath;
     private string                     m_PresetName;
-    private GameObject                 m_PreviewPlane;
 
     public void CreateGUI()
-    {
-        m_VisualTreeAsset.CloneTree(rootVisualElement);
+        {
+            m_VisualTreeAsset.CloneTree(rootVisualElement);
 
-        m_DirectoryField = rootVisualElement.Q<ObjectField>("DirectoryField");
-        m_DirectoryField.RegisterValueChangedCallback(OnDirectoryChanged);
-        
-        m_SelectField = rootVisualElement.Q<DropdownField>("SelectField");
-        m_SelectField.RegisterValueChangedCallback(OnPresetChanged);
-        
-        m_SceneControl = rootVisualElement.Q<UIToolkitSceneControl>();
-        m_SceneControl.OnUpdate(OnSceneUpdate);
-        
-        m_DirectoryField.value = FindFirstDirectoryWithPreset();
-        m_SelectField.value    = m_SelectField.choices[0];
-        RefreshSceneView();
-    }
+            m_DirectoryField = rootVisualElement.Q<ObjectField>("DirectoryField");
+            m_DirectoryField.RegisterValueChangedCallback(OnDirectoryChanged);
+            
+            m_SelectField = rootVisualElement.Q<DropdownField>("SelectField");
+            m_SelectField.RegisterValueChangedCallback(OnPresetChanged);
+            
+            m_SceneControl = rootVisualElement.Q<UIToolkitSceneControl>();
+            m_SceneControl.OnUpdate(OnSceneUpdate);
+            
+            m_CameraZLabel      = rootVisualElement.Q<Label>("CameraZ");
+            m_CameraZLabel.text = "";
+            
+            m_DirectoryField.value = FindFirstDirectoryWithPreset();
+            m_SelectField.value    = m_SelectField.choices[0];
+            
+            // Delay RefreshSceneView to ensure scene is initialized
+            EditorApplication.delayCall += () => RefreshSceneView();
+        }
 
     private void OnPresetChanged(ChangeEvent<string> evt)
     {
@@ -88,12 +93,19 @@ public class ArrowPresetBuilder : EditorWindow
 
     private void OnSceneUpdate()
     {
-        
+        var zoom = m_SceneControl.Camera.orthographicSize / 14.0f;
+        m_CameraZLabel.text = $"ZOOM: x{zoom:F2}";
     }
 
     private void RefreshSceneView()
     {
-        
+        m_SceneControl.Grid = new GridParameters
+        {
+            color      = Color.gray3,
+            lineSize   = 0.1f,
+            fadeOutMin = 0.1f,
+            fadeOutMax = 1f
+        };
     }
 
     private void OnDirectoryChanged(ChangeEvent<Object> evt) => OnDirectoryChanged(evt.newValue);

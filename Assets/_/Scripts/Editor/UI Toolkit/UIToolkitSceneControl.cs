@@ -3,14 +3,33 @@ using _.Scripts.Utility.Extensions;
 using Codice.Client.Common.WebApi.Responses;
 using Unity.Mathematics;
 using Unity.VisualScripting;
+using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
+using Object = UnityEngine.Object;
 
 namespace _.Scripts.Editor.UI_Toolkit
 {
+    [Serializable]
+    public struct GridParameters
+    {
+        public Color color;
+        public float lineSize;
+        public float fadeOutMin;
+        public float fadeOutMax;
+        
+        public static GridParameters Default => new GridParameters
+        {
+            color = new Color(0.7f, 0.7f, 0.7f, 1.0f),
+            lineSize = 0.02f,
+            fadeOutMin = 0.1f,
+            fadeOutMax = 1.0f
+        };
+    }
+    
     [UxmlElement]
     public partial class UIToolkitSceneControl : VisualElement
     {
@@ -25,8 +44,24 @@ namespace _.Scripts.Editor.UI_Toolkit
         private bool   _isWheenDown;
 
         private event Action _onUpdate;
+        
+        private Material _gridMaterial;
+        private Mesh _quadMesh;
+        private GridParameters _grid;
+        private GridParameters _gridPrevious;
 
         public Camera Camera => _camera;
+        public Scene Scene => _scene;
+        
+        public GridParameters Grid
+        {
+            get => _grid;
+            set
+            {
+                _grid = value;
+                UpdateGridMaterial();
+            }
+        }
 
         public UIToolkitSceneControl()
         {
@@ -46,16 +81,18 @@ namespace _.Scripts.Editor.UI_Toolkit
                 !this.panel.ToString().Contains("UI Builder"))
             {
                 CreateScene();
+                InitializeGrid();
 
                 _item = this.schedule.Execute(() =>
-                {
-                    if (!_scene.IsValid() || _camera == null)
-                        return;
+                 {
+                     if (!_scene.IsValid() || _camera == null)
+                         return;
 
-                    
-                    _camera.Render();
-                    _view.MarkDirtyRepaint();
-                }).Every((uint)(1000 / 120.0f));
+                     _onUpdate?.Invoke();
+                     RenderGrid();
+                     _camera.Render();
+                     _view.MarkDirtyRepaint();
+                 }).Every((uint)(1000 / 120.0f));
             }
         }
 
@@ -67,8 +104,111 @@ namespace _.Scripts.Editor.UI_Toolkit
             if (_view != null)
                 Remove(_view);
             
+            if (_gridMaterial != null)
+            {
+                Object.DestroyImmediate(_gridMaterial);
+                _gridMaterial = null;
+            }
+            
             if (_scene.IsValid())
                 EditorSceneManager.CloseScene(_scene, true);
+        }
+        
+        private void InitializeGrid()
+        {
+            _quadMesh = GetQuadMesh();
+            _gridMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/_/Shaders/Grid.mat");
+            if (_gridMaterial == null)
+            {
+                var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/_/Shaders/Grid Shader.shader");
+                if (shader != null)
+                {
+                    _gridMaterial = new Material(shader);
+                }
+            }
+            _grid = GridParameters.Default;
+            _gridPrevious = _grid;
+            UpdateGridMaterial();
+        }
+        
+        private void RenderGrid()
+        {
+            if (_gridMaterial == null || _quadMesh == null || !_scene.IsValid())
+                return;
+            
+            // Check if grid parameters changed
+            if (_grid.color != _gridPrevious.color || 
+                _grid.lineSize != _gridPrevious.lineSize ||
+                _grid.fadeOutMin != _gridPrevious.fadeOutMin ||
+                _grid.fadeOutMax != _gridPrevious.fadeOutMax)
+            {
+                UpdateGridMaterial();
+                _gridPrevious = _grid;
+            }
+            
+            // Set grid offset to 0.5, 0.5, 0.0
+            _gridMaterial.SetVector("_GridOffset", new Vector4(0.5f, 0.5f, 0.0f, 0.0f));
+            
+            // Calculate bounds based on camera orthographic size
+            float orthoSize = _camera.orthographicSize;
+            float aspect = _camera.aspect;
+            
+            // Set grid bounds for fadeout effect
+            _gridMaterial.SetVector("_GridBoundsMin", new Vector4(-orthoSize * aspect, -orthoSize, 0, 0));
+            _gridMaterial.SetVector("_GridBoundsMax", new Vector4(orthoSize * aspect, orthoSize, 0, 0));
+            
+            // Set orthographic size for dynamic grid cell size
+            _gridMaterial.SetFloat("_OrthoSize", orthoSize);
+            
+            // Get camera position
+            var cameraPos = _camera.transform.position;
+            
+            // Draw the grid as a full-screen rectangle at camera position XY with Z = -1
+            var matrix = Matrix4x4.TRS(
+                new Vector3(cameraPos.x, cameraPos.y, -1),
+                Quaternion.identity,
+                new Vector3(orthoSize * aspect * 2, orthoSize * 2, 1)
+            );
+            
+            Graphics.DrawMesh(_quadMesh, matrix, _gridMaterial, 0, _camera);
+        }
+        
+        private void UpdateGridMaterial()
+        {
+            if (_gridMaterial == null)
+                return;
+            
+            _gridMaterial.SetColor("_GridLineColor", _grid.color);
+            _gridMaterial.SetFloat("_FadeOutMin", _grid.fadeOutMin);
+            _gridMaterial.SetFloat("_FadeOutMax", _grid.fadeOutMax);
+        }
+        
+        private static Mesh s_QuadMesh;
+        
+        private Mesh GetQuadMesh()
+        {
+            if (s_QuadMesh != null)
+                return s_QuadMesh;
+                
+            var mesh = new Mesh();
+            mesh.vertices = new[]
+            {
+                new Vector3(-0.5f, -0.5f, 0),
+                new Vector3(0.5f, -0.5f, 0),
+                new Vector3(-0.5f, 0.5f, 0),
+                new Vector3(0.5f, 0.5f, 0)
+            };
+            mesh.uv = new[]
+            {
+                new Vector2(0, 0),
+                new Vector2(1, 0),
+                new Vector2(0, 1),
+                new Vector2(1, 1)
+            };
+            mesh.triangles = new[] { 0, 1, 2, 2, 1, 3 };
+            mesh.RecalculateNormals();
+            s_QuadMesh = mesh;
+            return mesh;
         }
 
         private void CreateScene()
