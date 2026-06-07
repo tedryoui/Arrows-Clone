@@ -476,7 +476,15 @@ namespace _.Scripts.Editor.UI_Toolkit
          /// </summary>
          /// <param name="mesh">The mesh to draw</param>
          /// <param name="matrix">The transformation matrix for the mesh</param>
-         /// <param name="material">The material to use for rendering</param>
+         /// <param name="color">The color to use for rendering</param>
+         public void DrawMesh(Mesh mesh, Matrix4x4 matrix, Color color)
+         {
+             if (mesh == null || _handleMaterial == null || _camera == null) return;
+             
+             _handleMaterial.color = color;
+             Graphics.DrawMesh(mesh, matrix, _handleMaterial, 0, _camera);
+         }
+         
          public void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material)
          {
              if (mesh == null || material == null || _camera == null) return;

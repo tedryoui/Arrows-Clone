@@ -5,6 +5,7 @@ using System.Linq;
 using _.Scripts.Editor.UI_Toolkit;
 using _.Scripts.Gameplay;
 using _.Scripts.Utility.Extensions;
+using _.Scripts.Utility.GameObject;
 using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEditor;
@@ -18,8 +19,8 @@ public class ArrowPresetBuilder : EditorWindow
 {
     public struct SelectNode
     {
-        public int3 current;
-        public int3 next;
+        public int3  current;
+        public int3? next;
 
         public override bool Equals(object obj)
         {
@@ -60,11 +61,18 @@ public class ArrowPresetBuilder : EditorWindow
     private string                     m_DirectoryPath;
     private string                     m_PresetName;
 
-    private bool              m_IsTrakingMouse;
-    private bool              m_IsTrackingSelection;
-    private float2            m_CurrentMousePosition;
-    private int3?             m_PreviousSelectedGridIndex;
-    private Stack<SelectNode> m_SelectedNodes;
+    private bool               m_IsTrakingMouse;
+    private bool               m_IsTrackingSelection;
+    private float2             m_CurrentMousePosition;
+    private int3?              m_PreviousSelectedGridIndex;
+    private Stack<SelectNode>  m_SelectedNodes;
+    private Mesh               m_PreviousCompositeMesh;
+    private int                m_PreviousSelectedNodesHash;
+    private List<Arrow>        m_Arrows;
+    private List<ArrowElement> m_ArrowElements;
+    private Material           m_Material;
+    private Mesh               m_Mesh;
+    private ComputeBuffer      m_ComputeBuffer;
     
     private float ActualCellSize => m_SceneControl.Camera.orthographicSize switch
     {
@@ -111,10 +119,57 @@ public class ArrowPresetBuilder : EditorWindow
         if (evt.button is 0 && m_IsTrackingSelection)
         {
             m_IsTrackingSelection = false;
+
+            if (m_SelectedNodes is { Count: > 1 })
+                PushArrow();
             
             m_SelectedNodes             = new Stack<SelectNode>();
             m_PreviousSelectedGridIndex = null;
         }
+    }
+
+    private void PushArrow()
+    {
+        List<ArrowElement> arrowElements = new List<ArrowElement>();
+
+        SelectNode          nipNode  = m_SelectedNodes.Pop();
+        SelectNode          nextNode = m_SelectedNodes.Peek();
+        ArrowElement.ElementDirection direction = ArrowElement.ToDirection(math.normalize(nipNode.current - nextNode.current).xy, out bool nipNegate);
+
+        arrowElements.Add(new ArrowElement
+        {
+            elementType            = ArrowElement.ElementType.Nip,
+            elementDirection       = direction,
+            elementDirectionNegate = nipNegate ? 1 : 0,
+            elementPoints          = new float4(nipNode.current.xy, 0.0f, 0.0f)
+        });
+
+        SelectNode previousNode = nipNode;
+        while (m_SelectedNodes.TryPop(out SelectNode trailNode))
+        {
+            ArrowElement.ElementDirection trailDirection = 
+                ArrowElement.ToDirection(math.normalize(previousNode.current - trailNode.current).xy, out bool trailNegate);
+            
+            arrowElements.Add(new ArrowElement
+            {
+                elementType            = ArrowElement.ElementType.Trail,
+                elementDirection       = trailDirection,
+                elementDirectionNegate = trailNegate ? 1 : 0,
+                elementPoints          = new float4(trailNode.current.xy, previousNode.current.xy)
+            });
+
+            previousNode = trailNode;
+        }
+
+        m_ArrowElements.AddRange(arrowElements);
+        
+        if (m_ComputeBuffer is not null && m_ComputeBuffer.IsValid())
+            m_ComputeBuffer.Dispose();
+
+        m_ComputeBuffer = new ComputeBuffer(m_ArrowElements.Count, ArrowElement.GetStrideSize());
+        m_ComputeBuffer.SetData(m_ArrowElements.ToArray());
+        m_Material.SetInt("_ArrowsDataSize", m_ComputeBuffer.count);
+        m_Material.SetBuffer("_ArrowsData", m_ComputeBuffer);
     }
 
     private void OnMouseDownSceneControl(MouseDownEvent evt)
@@ -214,18 +269,27 @@ public class ArrowPresetBuilder : EditorWindow
              DrawCellUnderMouse();
 
          if (m_IsTrackingSelection && m_IsTrakingMouse)
+         {
+             int currentHash = ComputeSelectedNodesHash();
+             if (currentHash != m_PreviousSelectedNodesHash)
+             {
+                 UpdateCompositeMesh();
+                 m_PreviousSelectedNodesHash = currentHash;
+             }
+
+             if (m_PreviousCompositeMesh != null)
+             {
+                 m_SceneControl.DrawMesh(m_PreviousCompositeMesh, Matrix4x4.identity, Color.limeGreen * new Vector4(1.0f, 1.0f, 1.0f, 0.2f));
+             }
+             
              DrawSelection();
+         }
+         
+         m_SceneControl.DrawMesh(m_Mesh, Matrix4x4.TRS(Vector3.zero, Quaternion.identity, Vector3.one * 10), m_Material);
      }
 
     private void DrawSelection()
     {   
-        foreach (var node in m_SelectedNodes)
-        {
-            float3 snapPoint = (float3)node.current * ActualCellSize;
-            
-            m_SceneControl.DrawHandle(snapPoint, ActualCellSize, Color.limeGreen * new Vector4(1.0f , 1.0f, 1.0f, 0.2f));
-        }
-        
         if (!GetHoveredGridIndex(out int3 index, out float3 point)) return;
 
         if (m_SelectedNodes.Count == 0 && m_PreviousSelectedGridIndex == null)
@@ -321,6 +385,42 @@ public class ArrowPresetBuilder : EditorWindow
         };
 
         m_SceneControl.Camera.orthographicSize = 7;
+        
+        m_ArrowElements = new List<ArrowElement>();
+        
+        m_Material = new Material(Shader.Find("Custom/ArrowsShader"));
+        m_Material.SetColor("_BaseColor", new Color32(24, 72, 79, 255));
+        m_Material.SetFloat("_ArrowOffset", 0.34f);
+        m_Material.SetFloat("_ArrowSize", 1.4f);
+        m_Material.SetVector("_ArrowShape", new Vector4(0.5f, 1.0f, 0.0f, 0.0f));
+        m_Material.SetFloat("_ArrowCorner", 0.75f);
+        m_Material.SetFloat("_TrailSize", 2f);
+        m_Material.SetVector("_TrailCornerRound", new Vector4(2, 2, 2, 2));
+        m_Material.SetInt("_ArrowsDataSize", 0);
+
+        m_Mesh = GetQuadMesh();
+    }
+    
+    private Mesh GetQuadMesh()
+    {
+        var mesh = new Mesh();
+        mesh.vertices = new[]
+        {
+            new Vector3(-0.5f, -0.5f, 0),
+            new Vector3(0.5f,  -0.5f, 0),
+            new Vector3(-0.5f, 0.5f,  0),
+            new Vector3(0.5f,  0.5f,  0)
+        };
+        mesh.uv = new[]
+        {
+            new Vector2(0, 0),
+            new Vector2(1, 0),
+            new Vector2(0, 1),
+            new Vector2(1, 1)
+        };
+        mesh.triangles = new[] { 0, 1, 2, 2, 1, 3 };
+        mesh.RecalculateNormals();
+        return mesh;
     }
 
     private void OnDirectoryChanged(ChangeEvent<Object> evt) => OnDirectoryChanged(evt.newValue);
@@ -364,5 +464,77 @@ public class ArrowPresetBuilder : EditorWindow
         }
 
         return null;
+    }
+
+    private int ComputeSelectedNodesHash()
+    {
+        if (m_SelectedNodes == null || m_SelectedNodes.Count == 0)
+            return 0;
+
+        unchecked
+        {
+            int hash = 17;
+            foreach (var node in m_SelectedNodes)
+            {
+                hash = hash * 31 + node.current.GetHashCode();
+                hash = hash * 31 + node.next.GetHashCode();
+            }
+
+            return hash;
+        }
+    }
+
+    private void UpdateCompositeMesh()
+    {
+        if (m_PreviousCompositeMesh == null)
+            m_PreviousCompositeMesh = new Mesh();
+        else
+            m_PreviousCompositeMesh.Clear();
+
+        if (m_SelectedNodes == null || m_SelectedNodes.Count == 0)
+        {
+            m_PreviousCompositeMesh.RecalculateBounds();
+            return;
+        }
+
+        var vertices = new List<Vector3>();
+        var triangles = new List<int>();
+        var uvs = new List<Vector2>();
+
+        foreach (var node in m_SelectedNodes)
+        {
+            float3 start = (float3)node.current * ActualCellSize;
+
+            Matrix4x4 matrix = Matrix4x4.TRS(start, Quaternion.identity, new Vector3(1, 1, 1));
+
+            Vector3 v0 = new Vector3(-0.5f, -0.5f, 0);
+            Vector3 v1 = new Vector3(0.5f, -0.5f, 0);
+            Vector3 v2 = new Vector3(-0.5f, 0.5f, 0);
+            Vector3 v3 = new Vector3(0.5f, 0.5f, 0);
+
+            int baseIndex = vertices.Count;
+            vertices.Add(matrix.MultiplyPoint(v0));
+            vertices.Add(matrix.MultiplyPoint(v1));
+            vertices.Add(matrix.MultiplyPoint(v2));
+            vertices.Add(matrix.MultiplyPoint(v3));
+
+            triangles.Add(baseIndex);
+            triangles.Add(baseIndex + 1);
+            triangles.Add(baseIndex + 2);
+            triangles.Add(baseIndex + 2);
+            triangles.Add(baseIndex + 1);
+            triangles.Add(baseIndex + 3);
+
+            uvs.Add(new Vector2(0, 0));
+            uvs.Add(new Vector2(1, 0));
+            uvs.Add(new Vector2(0, 1));
+            uvs.Add(new Vector2(1, 1));
+        }
+
+        m_PreviousCompositeMesh.SetVertices(vertices);
+        m_PreviousCompositeMesh.SetTriangles(triangles, 0);
+        m_PreviousCompositeMesh.SetUVs(0, uvs);
+        m_PreviousCompositeMesh.RecalculateNormals();
+        m_PreviousCompositeMesh.RecalculateBounds();
     }
 }

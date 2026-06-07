@@ -183,6 +183,11 @@ namespace _.Scripts.Utility.GameObject
             this.elementDirectionNegate = elementNegate ? 1 : 0;
             this.elementPoints          = elementPoints;
         }
+
+        public static int GetStrideSize()
+        {
+            return sizeof(int) * 3 + sizeof(float) * 4;
+        }
         
         public static float2 FromDirection(ArrowElement.ElementDirection direction, bool negate)
         {
@@ -204,7 +209,7 @@ namespace _.Scripts.Utility.GameObject
             return fDir;
         }
 
-        public ArrowElement.ElementDirection ToDirection(float2 dir, out bool negate)
+        public static ElementDirection ToDirection(float2 dir, out bool negate)
         {
             var rDir = math.normalize(dir);
             

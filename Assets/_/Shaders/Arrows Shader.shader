@@ -20,6 +20,7 @@ Shader "Custom/ArrowsShader"
         Pass
         {
             Blend SrcAlpha OneMinusSrcAlpha
+            Cull Off
             
             HLSLPROGRAM
 
@@ -161,7 +162,7 @@ Shader "Custom/ArrowsShader"
                         value += sdfTrail(arrowData, IN);
                 }
                 
-                return half4(_BaseColor.rgb, _BaseColor.a * (value > 0.0f) ? 1.0f : 0.0f); 
+                return half4(_BaseColor.rgb, _BaseColor.a * (value > 0.0f) ? 1.0f : 0.0f);
             }
             
             ENDHLSL
