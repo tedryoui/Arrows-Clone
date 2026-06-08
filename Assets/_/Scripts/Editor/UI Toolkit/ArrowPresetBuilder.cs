@@ -1,92 +1,23 @@
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
+using System.Reflection;
 using _.Scripts.Editor.UI_Toolkit;
 using _.Scripts.Gameplay;
-using _.Scripts.Utility.Extensions;
 using _.Scripts.Utility.GameObject;
 using DG.DOTweenEditor;
 using DG.Tweening;
 using Unity.Mathematics;
-using Unity.VisualScripting;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 using Path = System.IO.Path;
+using ArrowNode = _.Scripts.Gameplay.SessionPreset.ArrowNode;
 
 public class ArrowPresetBuilder : EditorWindow
 {
-    public struct SelectNode
-    {
-        public int3  current;
-        public int3? next;
-
-        public override bool Equals(object obj)
-        {
-            if (obj is SelectNode node) return Equals(node);
-            return base.Equals(obj);
-        }
-
-        private bool Equals(SelectNode other)
-        {
-            return other.current.Equals(current);
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(current);
-        }
-    }
-    
-    public class ArrowNode
-    {
-        public int2      index;
-        public ArrowNode next;
-        public ArrowNode previous;
-
-        public float4 GetElementPoints()
-        {
-            return new float4(index, next?.index ?? float2.zero);
-        }
-        
-        public ArrowElement.ElementType GetElementType()
-        {
-            return next == null ? ArrowElement.ElementType.Nip : ArrowElement.ElementType.Trail;
-        }
-
-        public ArrowElement.ElementDirection GetElementDirection(out bool negate)
-        {
-            if (next == null)
-            {
-                return previous.GetElementDirection(out negate);
-            }
-            else
-            {
-                int2 raw = (int2)math.normalize(next.index - index);
-                return ArrowElement.ToDirection(raw, out negate);
-            }
-        }
-
-        public List<ArrowNode> Flatten()
-        {
-            ArrowNode root = this;
-            while (root.previous != null) root = root.previous;
-            
-            List<ArrowNode> elements = new List<ArrowNode>();
-            while (root != null)
-            {
-                elements.Add(root);
-                
-                root = root.next;
-            }
-
-            return elements;
-        }
-    }
-    
     [SerializeField]
     private VisualTreeAsset m_VisualTreeAsset = default;
 
@@ -106,7 +37,20 @@ public class ArrowPresetBuilder : EditorWindow
 
     private void ExportDataToAsset()
     {
-        
+        if (m_PresetNameToPath.TryGetValue(m_PresetName, out string path))
+        {
+            var sessionPreset = AssetDatabase.LoadAssetAtPath<SessionPreset>(path);
+
+            var field = sessionPreset.GetType().GetField("_values", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            if (field != null && m_ArrowNodes is {Count: > 0})
+            {
+                foreach (var node in m_ArrowNodes.ToArray())
+                    ValidateArrowNode(node);
+                
+                field.SetValue(sessionPreset, m_ArrowNodes.ToArray());
+            }
+        }
     }
 
     private ObjectField           m_DirectoryField      = default;
@@ -188,7 +132,7 @@ public class ArrowPresetBuilder : EditorWindow
             m_OverlapScale.RegisterValueChangedCallback(_ => OnOverlapChanged()); 
             
             m_DirectoryField.value = FindFirstDirectoryWithPreset();
-            m_SelectField.value    = m_SelectField.choices[0];
+            OnDirectoryChanged(m_DirectoryField.value);
             
             EditorApplication.delayCall += RefreshSceneView;
         }
@@ -548,12 +492,18 @@ public class ArrowPresetBuilder : EditorWindow
         }
     }
 
-    private void OnPresetChanged(ChangeEvent<string> evt)
+    private void OnPresetChanged(ChangeEvent<string> evt) => OnPresetChanged(evt.newValue);
+
+    private void OnPresetChanged(string value)
     {
         if (!string.IsNullOrEmpty(m_PresetName))
             ExportDataToAsset();
         
-        if (evt.newValue.Equals("== Create new =="))
+        m_ArrowNodes         = null;
+        m_ArrowElementsCache = null;
+        m_ArrowNodesMatrix   = null;
+        
+        if (value.Equals("== Create new =="))
         {
             var sessionPreset = ScriptableObject.CreateInstance<SessionPreset>();
 
@@ -578,9 +528,33 @@ public class ArrowPresetBuilder : EditorWindow
         }
         else
         {
-            m_PresetName = evt.newValue;
+            m_PresetName = value;
         }
 
+        if (m_PresetNameToPath.TryGetValue(m_PresetName, out string path))
+        {
+            SessionPreset preset = AssetDatabase.LoadAssetAtPath<SessionPreset>(path);
+
+            if (preset.Values is { Length: not 0 })
+            {
+                m_ArrowNodes       = preset.Values.ToList();
+                m_ArrowNodesMatrix = m_ArrowNodes.SelectMany(x => x.Flatten()).ToDictionary(k => k.index, v => v);
+                RefreshArrowElementsCache();
+        
+                if (m_ComputeBuffer is not null && m_ComputeBuffer.IsValid())
+                    m_ComputeBuffer.Dispose();
+        
+                m_ComputeBuffer = new ComputeBuffer(m_ArrowElementsCache.Count, ArrowElement.GetStrideSize());
+                m_ComputeBuffer.SetData(m_ArrowElementsCache.ToArray());
+                
+                if (m_Material != null)
+                {
+                    m_Material.SetInt("_ArrowsDataSize", m_ComputeBuffer.count);
+                    m_Material.SetBuffer("_ArrowsData", m_ComputeBuffer);
+                }
+            }
+        }
+        
         RefreshSceneView();
     }
 
@@ -667,6 +641,17 @@ public class ArrowPresetBuilder : EditorWindow
         m_Material.SetVector("_TrailCorner", new Vector4(1, 1, 1, 1));
         m_Material.SetInt("_ArrowsDataSize", 0);
 
+        if (m_ArrowNodes is {Count: > 0})
+        {
+            if (m_ComputeBuffer is not null && m_ComputeBuffer.IsValid())
+                m_ComputeBuffer.Dispose();
+        
+            m_ComputeBuffer = new ComputeBuffer(m_ArrowElementsCache.Count, ArrowElement.GetStrideSize());
+            m_ComputeBuffer.SetData(m_ArrowElementsCache.ToArray());
+            m_Material.SetInt("_ArrowsDataSize", m_ComputeBuffer.count);
+            m_Material.SetBuffer("_ArrowsData", m_ComputeBuffer);
+        }
+
         m_Mesh = GetQuadMesh();
 
         m_SceneControl.OnUpdate(OnSceneUpdate);
@@ -708,17 +693,14 @@ public class ArrowPresetBuilder : EditorWindow
             
             m_PresetNameToPath = presets.ToDictionary(Path.GetFileNameWithoutExtension, v => v);
         
-            m_SelectField.SetEnabled(true);
-            
             m_SelectField.choices = presets.Select(Path.GetFileNameWithoutExtension).Append("== Create new ==").ToList();
-            m_SelectField.value   = m_SelectField.choices[0];
+            m_SelectField.index   = 0;
+            OnPresetChanged(m_SelectField.value);
         }
         else
         {
-            m_SelectField.SetEnabled(false);
-
-            m_SelectField.choices = new List<string>() { "" };
-            m_SelectField.value   = m_SelectField.choices[0];
+            m_SelectField.choices = new List<string>() { "", "== Create new ==" };
+            m_SelectField.index   = 0;
         }
     }
 
@@ -734,7 +716,24 @@ public class ArrowPresetBuilder : EditorWindow
             return AssetDatabase.LoadAssetAtPath(directory,  typeof(DefaultAsset));
         }
 
-        return null;
+        UIToolkitModal.Open("Create first Session Preset", fileName =>
+        {
+            var sessionPreset = ScriptableObject.CreateInstance<SessionPreset>();
+
+            sessionPreset.name = fileName;
+            m_PresetName       = sessionPreset.name;
+            
+            var path = Path.Combine("Assets/" + fileName + ".asset");
+            
+            AssetDatabase.CreateAsset(sessionPreset, path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            m_DirectoryField.value = FindFirstDirectoryWithPreset();
+            OnDirectoryChanged(m_DirectoryField.value);
+        });
+        
+        return AssetDatabase.LoadAssetAtPath<DefaultAsset>("Assets");
     }
 
     private void ShowNotify()
