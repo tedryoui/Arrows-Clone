@@ -12,6 +12,24 @@
         <ui:VisualElement name="Main" class="container__main">
             <_.Scripts.Editor.UI_Toolkit.UIToolkitSceneControl/>
         </ui:VisualElement>
+        <ui:VisualElement name="Parameters" class="container__parameters">
+            <ui:VisualElement name="Main" class="parameters__main">
+                <ui:VisualElement style="flex-direction: row; height: 95px;">
+                    <ui:VisualElement>
+                        <ui:Image source="" uv="0,0,1,0.85" name="OverlapImage" class="parameters__overlap-image" style="padding-top: 10px; padding-right: 10px; padding-bottom: 10px; padding-left: 10px;">
+                            <uie:ObjectField label="" allow-scene-objects="false" value="" type="UnityEngine.Texture, UnityEngine.CoreModule" name="OverlapField" class="parameters__overlap-field"/>
+                        </ui:Image>
+                    </ui:VisualElement>
+                    <ui:VisualElement style="flex-grow: 1; margin-left: 15px; justify-content: flex-end;">
+                        <ui:Label text="Center" style="-unity-font-style: bold;"/>
+                        <ui:Vector2Field label="" name="OverlapCenter" class="parameters__overlap-center"/>
+                        <ui:Label text="Scale" style="-unity-font-style: bold; margin-top: 5px;"/>
+                        <ui:Vector2Field label="" name="OverlapScale" value="5,5" class="parameters__overlap-scale"/>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Button text="" name="ToggleButton" icon-image="project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=-4521532143779581420&amp;guid=1410846fea164f64a914d6be16cb7723&amp;type=3#arrow-right" class="parameters__toggle" style="margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; border-left-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0;"/>
+        </ui:VisualElement>
         <ui:VisualElement name="Footer" class="container__bar container__bottom-bar">
             <ui:Label text="Arrow Preset Builder v 0.1"/>
             <ui:VisualElement style="flex-grow: 1; height: 100%; flex-direction: row; justify-content: flex-end; align-items: center; padding-right: 5px;">
@@ -20,5 +38,8 @@
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="Modal" class="container__modal"/>
+        <ui:VisualElement name="Notify" class="container__notify">
+            <ui:Label text="Wrong!" name="NotifyText" class="notify__text"/>
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

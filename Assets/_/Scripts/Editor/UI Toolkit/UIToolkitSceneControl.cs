@@ -103,8 +103,11 @@ namespace _.Scripts.Editor.UI_Toolkit
 
         private void OnPanelAttachEvent(AttachToPanelEvent evt)
         {
+            int width  = 480;
+            int height = 680;
+            
             _renderTexture =
-                new RenderTexture(480, 720, 24, RenderTextureFormat.ARGB32);
+                new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
             _renderTexture.Create();
 
             _targetCameraPosition = Vector3.forward * -10;
@@ -222,12 +225,10 @@ namespace _.Scripts.Editor.UI_Toolkit
             _gridMaterial.SetVector("_GridBoundsMax", new Vector4(orthoSize * aspect, orthoSize, 0, 0));
             _gridMaterial.SetVector("_GridOffset", new  Vector4(0.5f, 0.5f, 0, 0));
             
-            _gridMaterial.SetFloat("_OrthoSize", orthoSize);
-            
             var cameraPos = _camera.transform.position;
             
             var matrix = Matrix4x4.TRS(
-                new Vector3(cameraPos.x, cameraPos.y, 1),
+                new Vector3(cameraPos.x, cameraPos.y, 0),
                 Quaternion.identity,
                 new Vector3(orthoSize * aspect * 2, orthoSize * 2, 1)
             );
@@ -563,11 +564,9 @@ namespace _.Scripts.Editor.UI_Toolkit
         {
             var deltaTime = DeltaTime;
             var zoomSpeed = 18.0f * deltaTime;
-
-            if (_targetCameraSize > 7f || evt.delta.y > 0.0f)
-                _targetCameraSize += zoomSpeed * evt.delta.y;
-            else
-                _targetCameraSize = 7f;
+            
+            _targetCameraSize += zoomSpeed * evt.delta.y;
+            _targetCameraSize = math.clamp(_targetCameraSize, 7f, 14f);
             
             evt.StopPropagation();
         }

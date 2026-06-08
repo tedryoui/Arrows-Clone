@@ -8,12 +8,11 @@ Shader "Custom/GridShader"
         _FadeOutMax("Fade Out Max Alpha", Range(0, 1)) = 1.0
         _GridBoundsMin("Grid Bounds Min", Vector) = (-14, -14, 0, 0)
         _GridBoundsMax("Grid Bounds Max", Vector) = (14, 14, 0, 0)
-        _OrthoSize("Orthographic Size", Float) = 14
     }
 
     SubShader
     {
-        Tags { "RenderType" = "Transparent" "Queue" = "Transparent" "RenderPipeline" = "UniversalPipeline" }
+        Tags { "RenderType" = "Transparent" "Queue" = "Transparent-1" "RenderPipeline" = "UniversalPipeline" }
 
         Pass
         {
@@ -49,7 +48,6 @@ Shader "Custom/GridShader"
                 float _FadeOutMax;
                 float2 _GridBoundsMin;
                 float2 _GridBoundsMax;
-                float _OrthoSize;
             CBUFFER_END
 
             Varyings vert(Attributes IN)
@@ -67,12 +65,6 @@ Shader "Custom/GridShader"
                 float2 worldPos = IN.worldPos.xy + _GridOffset;
                 
                 float gridSize = 1.0;
-                if (_OrthoSize > 0)
-                {
-                    float steps = floor((_OrthoSize - 7.0) / 7.0);
-                    steps = min(steps, 3.0);
-                    gridSize = pow(2.0, steps);
-                }
                 
                 float2 gridPos = worldPos + gridSize * 0.5;
                 

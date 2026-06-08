@@ -145,15 +145,9 @@ namespace _.Scripts.Utility.GameObject
     }
 
     [Serializable]
-    public struct Arrow : IDisposable
+    public struct Arrow
     {
-        public uint              index;
-        // public NativeArray<uint> elementIndices;
-
-        public void Dispose()
-        {
-            // elementIndices.Dispose();
-        }
+        public List<ArrowElement> Elements;
     }
     
     [Serializable]
@@ -238,6 +232,13 @@ namespace _.Scripts.Utility.GameObject
             }
             
             throw new Exception("Invalid direction");
+        }
+
+        public override string ToString()
+        {
+            return $"Arrow Element ({elementType.ToString()})" +
+                   $"   Direction: {elementDirection.ToString()}[{elementDirectionNegate}]" +
+                   $"   Points: [FROM: {elementPoints.xy}, TO: {elementPoints.xy}]";
         }
     }
 }
