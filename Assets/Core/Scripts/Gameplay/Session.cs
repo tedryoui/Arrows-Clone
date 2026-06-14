@@ -13,8 +13,6 @@ namespace _.Scripts.Gameplay
         
         private Timer _timer;
 
-        private bool _isRaycastBlocked;
-
         private CancellationTokenSource _sessionCancellationTokenSource;
         
         public Timer Timer => _timer;
@@ -29,8 +27,6 @@ namespace _.Scripts.Gameplay
                 .CreateLinkedTokenSource(
                     Application.exitCancellationToken);
 
-            _isRaycastBlocked = false;
-            
             _onLose = delegate { };
             _onWin  = delegate { };
             
